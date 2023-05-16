@@ -17,22 +17,28 @@ $request_method = $_SERVER['REQUEST_METHOD'];
 
 if ($request_method === 'GET') {
 
-    // Allow any domain (use '*' for a wildcard)
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
     header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept');
-    //Set the Content-Type header to application/json
     header('Content-Type: application/json');
 
-    /******************************************************************************
-     * Section: Parse the array from the URL query string.
-     * Description: for each element in $categories, we will generate an sql string and placeholder variables.
-     ******************************************************************************/
+
 
     $conditions = [];
     $placeholders = [];
 
-    //Check for keyvalue pairs in the URL, - Prevent SQL attacks by using placeholders and mysqli prepared statements
+    //Check for keyvalue pairs in the URL. If there are none, then the query will return all films.
+    //SQL attacks are prevented by using placeholders and mysqli prepared statements.
+
+    /******************************************************************************
+     * Section: Parse the array(s) from the URL query string.
+     * Description: Parsing arrays from query strings 
+     * 1. The implode function creates a comma separated string from an array.
+     * 2. rather than a for loop we can use array_fill to create an array of placeholders.
+     * 3. $conditions builds a part of the final WHERE clause
+     * 4. $placeholders is an array of values that will be used to replace the placeholders(?) in the SQL query.
+     * 5. Add all the placeholders (categories, ratings, etc) to the $placeholders array. We will use them when preparing! our sql statement.
+     ******************************************************************************/
 
     // Assuming catergories is an array of strings.
     if (isset($_GET['categories']) && !empty($_GET['categories'])) {
@@ -41,23 +47,20 @@ if ($request_method === 'GET') {
         $whereClause = implode(', ', array_fill(0, count($categories), '?'));
         $conditions[] = "c.name IN ($whereClause)";
         $placeholders = array_merge($placeholders, $categories);
-
     }
 
-    // Assuming language is a string.
+    // Assuming language is a single string.
     if (isset($_GET['language']) && !empty($_GET['language'])) {
 
         $language = $_GET['language'];
         $conditions[] = "l.name = ?";
         $placeholders[] = $language;
-
     }
 
-    //Assuming actors is an array of strings and each string separated by a space AKA %20 in the URL.
+    //Assuming actors is an array of strings and each string is separated by a space AKA %20 in the URL.
     if (isset($_GET['actors']) && !empty($_GET['actors'])) {
 
         $actors = $_GET['actors'];
-        print_r($actors);
 
         // Split the actor's first name and last name into separate variables.
         $actorConditions = [];
@@ -75,6 +78,7 @@ if ($request_method === 'GET') {
         $conditions[] = "($whereClause)";
     }
 
+    // Assuming ratings is an array of strings.
     if (isset($_GET['ratings']) && !empty($_GET['ratings'])) {
 
         $ratings = $_GET['ratings'];
@@ -90,21 +94,32 @@ if ($request_method === 'GET') {
         $whereClause = 'WHERE ' . implode(' AND ', $conditions);
     }
 
-
+    /******************************************************************************
+     * Section: Build the SQL query to get everything about a movie.
+     * Description: 
+     ******************************************************************************/
 
     // Get the category ID from the category table
-    $sql = "SELECT f.*, a.*
-        FROM film AS f 
-        JOIN film_category AS fc ON f.film_id = fc.film_id
-        JOIN category AS c ON fc.category_id = c.category_id
+    $sql = "SELECT f.*, a.*, l.name AS language_name, c.name AS category_name,
+    -- Stop actors from causing the query to return duplicate rows
+    GROUP_CONCAT(DISTINCT CONCAT(a.first_name, ' ', a.last_name) SEPARATOR ', ') as actors
 
-        JOIN film_actor AS fa ON f.film_id = fa.film_id
-        JOIN actor AS a ON fa.actor_id = a.actor_id
+     FROM film AS f 
+     JOIN film_category AS fc ON f.film_id = fc.film_id
 
-        JOIN language AS l ON f.language_id = l.language_id
+     JOIN film_actor AS fa ON f.film_id = fa.film_id
+     JOIN actor AS a ON fa.actor_id = a.actor_id
+
+    -- Get the category name
+     JOIN language AS l ON f.language_id = l.language_id
+    --  Get the language name
+    JOIN category AS c ON fc.category_id = c.category_id
         $whereClause";
 
-
+    /******************************************************************************
+     * Section: Allows us to sort our data by a column and direction.
+     * Description: 
+     ******************************************************************************/
 
     if (isset($_GET['sortby']) && !empty($_GET['sortby'])) {
 
@@ -129,9 +144,6 @@ if ($request_method === 'GET') {
             $sql .= " " . $orderByClause;
         }
     }
-
-
-    echo $sql;
 
     /******************************************************************************
      * Section: Here we will use Prepared SQL statements to prevent SQL attacks.
@@ -167,12 +179,7 @@ if ($request_method === 'GET') {
         echo "0 results";
     }
 
-    /******************************************************************************
-     * Section: Here we will use query the database for the tables we need.
-     * Description: 
-     ******************************************************************************/
-
-    print_r($data);
+    echo json_encode($data);
     // Converts the array to JSON format and send it to the requestee
     // echo json_encode($data);
 } else {

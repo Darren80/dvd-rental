@@ -25,9 +25,21 @@ if ($_SERVER["REQUEST_METHOD"] == "GET") {
         $film_id = null;
     }
 
+    $sql = "SELECT s.store_id, COUNT(s.store_id) AS stock, a.address, c.city, co.country
+    FROM `inventory` 
+
+    JOIN store s ON inventory.store_id = s.store_id
+    JOIN address a ON s.address_id = a.address_id
+    JOIN city c ON a.city_id = c.city_id
+    JOIN country co ON c.country_id = co.country_id
+
+    WHERE film_id = ?
+
+    GROUP BY store_id;";
+
     if ($film_id) {
         // Prepare SQL statement
-        $stmt = $link->prepare("SELECT store_id, COUNT(store_id) FROM `inventory` WHERE film_id = ? GROUP BY store_id;");
+        $stmt = $link->prepare($sql);
         $stmt->bind_param("i", $film_id);
 
         if ($stmt->execute()) {

@@ -10,7 +10,10 @@ if ($link->connect_error) {
     die("Connection failed: " . $link->connect_error);
 }
 
-// Update the total_sales column in the sales_by_film_category table
+/******************************************************************************
+ * Section: This file updates the tables that provide the statistics for the dashboard section.
+ * Description: 
+ ******************************************************************************/
 
 /******************************************************************************
  * Section: What is the "total sales" and the "number of sales" (popularity) by film category?
@@ -24,15 +27,23 @@ if (!$link->query($sql)) {
 }
 
 $sql = "INSERT INTO
-    sales_by_film_category (category_id, total_count, total_sales)
+    sales_by_film_category (category_id, name, total_count, total_sales)
 SELECT 
-    fc.category_id, COUNT(fc.category_id), SUM(fc.category_id)
+    fc.category_id, c.name, COUNT(fc.category_id), SUM(f.rental_rate)
 FROM 
     rental r
 JOIN 
+-- Get film ID from inventory table.
     inventory i ON r.inventory_id = i.inventory_id
-JOIN 
+JOIN
+-- Get the film rental rate from the film table.
+    film f ON i.film_id = f.film_id
+JOIN
+-- Get the film category ID from the film_category table.
     film_category fc ON i.film_id = fc.film_id
+JOIN
+-- Get the category name from the category table.
+    category c ON fc.category_id = c.category_id
 GROUP BY 
     fc.category_id;";
 
@@ -74,7 +85,7 @@ JOIN
     -- Get the film rental rate.
     film f ON i.film_id = f.film_id
 GROUP BY
-    s.store_id";
+    s.store_id;";
 
 // Execute the query
 if (!$link->query($sql) === TRUE) {
@@ -93,13 +104,19 @@ if (!$link->query($sql)) {
 }
 
 $sql = "INSERT INTO 
-    sales_by_week (week_beginning, week_ending, rental_count)
+    sales_by_week (week_beginning, week_ending, sales)
 SELECT 
     DATE_SUB(rental_date, INTERVAL WEEKDAY(rental_date) DAY) AS week_beginning, 
     DATE_ADD(rental_date, INTERVAL (6 - WEEKDAY(rental_date)) DAY) AS week_ending, 
-    COUNT(*) as rental_count
+    SUM(f.rental_rate) as sales
 FROM 
-    rental 
+    rental
+JOIN
+    -- Get film ID from inventory table.
+    inventory i ON rental.inventory_id = i.inventory_id 
+JOIN
+    -- Get the film rental rate.
+    film f ON i.film_id = f.film_id
 GROUP BY 
     WEEK(rental_date, 1);";
 

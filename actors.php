@@ -15,10 +15,10 @@ $request_method = $_SERVER['REQUEST_METHOD'];
 
 if ($request_method === 'GET') {
 
-    // Allows any domain '*' for wildcard
     header('Access-Control-Allow-Origin: *');
     header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
     header('Access-Control-Allow-Headers: Origin, X-Requested-With, Content-Type, Accept');
+    header('Content-Type: application/json');
 
     // SQL query to fetch data
     $sql = "SELECT * FROM actor";
@@ -31,10 +31,6 @@ if ($request_method === 'GET') {
         while ($row = $result->fetch_assoc()) {
             $data[] = $row;
         }
-
-        //Send it to the requestee
-        //Set the Content-Type header to application/json
-        header('Content-Type: application/json');
 
         // Convert the array to JSON format and send it
         echo json_encode($data);

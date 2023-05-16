@@ -22,7 +22,7 @@ require '../refreshTables.php';
  * Description: 
  ******************************************************************************/
 
-$sql = "SELECT * FROM `sales_by_film_category`;";
+$sql = "SELECT * FROM `sales_by_film_category` ORDER BY total_sales DESC;";
 $result = $link->query($sql);
 
 if ($result) {
@@ -41,7 +41,7 @@ if ($result) {
  * Description: 
  ******************************************************************************/
 
-$sql = "SELECT * FROM `sales_by_store`;";
+$sql = "SELECT * FROM `sales_by_store` ORDER BY total_sales DESC;";
 $result = $link->query($sql);
 
 if ($result) {
@@ -60,7 +60,7 @@ if ($result) {
  * Description: 
  ******************************************************************************/
 
-$sql = "SELECT * FROM `sales_by_week`;";
+$sql = "SELECT * FROM `sales_by_week` ORDER BY week_ending DESC;";
 $result = $link->query($sql);
 
 if ($result) {

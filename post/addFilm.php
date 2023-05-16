@@ -9,9 +9,21 @@ if ($link->connect_error) {
     die("Connection failed: " . $link->connect_error);
 }
 
-// When form is submitted
+// When the method is PUT then that means we will be updating an existing film in the database.
+if ($_SERVER["REQUEST_METHOD"] == "PUT") {
+    // DUMP the data from the request body into a variable
+    parse_str(file_get_contents('php://input'), $_PUT);
+    var_dump($_PUT); //$_PUT contains put fields 
+}
+
+// When the method is POST then that means will will be adding a new film to the database.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    echo $_PUT;
     $errors = [];
+
+    // Sanitize input when the incoming data is meant to be a string
+    // Use a special php functin called filter_var when data is a integer or float, this is done to prevent SQL injection.
+    // If statements are used to check if the data is empty or not AND to check if the data is valid or not.
 
     // Title
     $title = sanitize_input($_POST["title"]);
@@ -76,7 +88,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     }
 
     // Other table variables
-    $actor_id = filter_var($_POST["actor_id"], FILTER_SANITIZE_NUMBER_INT);
+    $actor_id = filter_var($_POST["actors_id"], FILTER_SANITIZE_NUMBER_INT);
     $category_id = filter_var($_POST["category_id"], FILTER_SANITIZE_NUMBER_INT);
 
     if (empty($actor_id) || empty($category_id)) {
@@ -85,10 +97,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // If there are no errors, insert the data into the database
     if (empty($errors)) {
+        $sql = "INSERT INTO film 
+        (title, description, release_year, language_id, rental_duration, rental_rate, length, replacement_cost, rating, special_features) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         // Prepare SQL statement
-        $stmt = $link->prepare("INSERT INTO film (title, description, release_year) VALUES (?, ?, ?)");
-        $stmt->bind_param("ssi", $title, $description, $release_year);
+        $stmt = $link->prepare($sql);
+        // Bind parameters to the prepared statement
+        $stmt->bind_param("ssiiiiiiss", $title, $description, $release_year, $language_id, $rental_duration, $rental_rate, $length, $replacement_cost, $rating, $special_features);
 
+        // Execute the prepared statement
         if ($stmt->execute()) {
             echo "New record created successfully in the film table";
             //Get the last inserted id
@@ -115,11 +132,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
     
             //Insert into the film_description table
-            $stmt = $link->prepare("INSERT INTO film_description (film_id, title, description) VALUES (?, ?, ?)");
+            $stmt = $link->prepare("INSERT INTO film_text (film_id, title, description) VALUES (?, ?, ?)");
             $stmt->bind_param("iss", $film_id, $title, $description);
     
             if ($stmt->execute()) {
-                echo "New record created successfully in the film_description table";
+                echo "New record created successfully in the film_text table";
             } else {
                 echo "Error: " . $stmt->error;
             }
